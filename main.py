@@ -12,7 +12,7 @@ with open('Sentences_75Agree_sample.txt', 'r', encoding='latin1') as file:
 data = [line.strip().split('@') for line in lines]
 df = pd.DataFrame(data, columns=['sentence', 'label'])
 
-df['label'] = df['label'].astype(int)
+df['label'] = df['label'].astype()
 
 # Tokenization
 max_words = 10000
