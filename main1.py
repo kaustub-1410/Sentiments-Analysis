@@ -11,7 +11,7 @@ from tensorflow.keras.models import load_model
 # -------------------------------
 MODEL_PATH = 'final_model.h5'
 TOKENIZER_PATH = 'tokenizer.pickle'
-#TRAINING_DATA_PATH = 'Sentences_75Agree_sample.txt'
+TRAINING_DATA_PATH = 'Sentences_75Agree_sample.txt'
 max_words = 5543  # Ensure this matches your training configuration
 vectorization_mode = 'binary'  # Use the same mode as was used during training
 
