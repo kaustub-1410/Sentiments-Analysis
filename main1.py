@@ -1,48 +1,62 @@
+import os
+import pickle
 import pandas as pd
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.models import load_model
 
-# -----------------------------------------------------------------------------
-# Step 1. Load dataset (used here to fit the tokenizer; adjust the filename if needed)
-# -----------------------------------------------------------------------------
-with open('Sentences_75Agree_sample.txt', 'r', encoding='latin1') as file:
-    lines = file.readlines()
+# -------------------------------
+# Configuration and File Paths
+# -------------------------------
+MODEL_PATH = 'final_model.h5'
+TOKENIZER_PATH = 'tokenizer.pickle'
+TRAINING_DATA_PATH = 'Sentences_75Agree_sample.txt'
+max_words = 5543  # Ensure this matches your training configuration
+vectorization_mode = 'binary'  # Use the same mode as was used during training
 
-# Each line is assumed to be in the format: sentence@label
-data = [line.strip().split('@') for line in lines]
-df = pd.DataFrame(data, columns=['sentence', 'label'])
+# -------------------------------
+# Step 1. Load or Create the Tokenizer
+# -------------------------------
+if os.path.exists(TOKENIZER_PATH):
+    # Load the saved tokenizer
+    with open(TOKENIZER_PATH, 'rb') as handle:
+        tokenizer = pickle.load(handle)
+    print("Tokenizer loaded from", TOKENIZER_PATH)
+else:
+    # Fallback: Fit a new tokenizer on the training data file
+    print("Tokenizer pickle file not found. Fitting a new tokenizer from training data.")
+    
+    # Read the training data file (each line in format: sentence@label)
+    with open(TRAINING_DATA_PATH, 'r', encoding='latin1') as file:
+        lines = file.readlines()
 
-# If needed, convert labels to numeric using a mapping.
-# (Uncomment and adjust if you want to convert labels from strings to numbers.)
-# label_mapping = {'negative': 0, 'neutral': 1, 'positive': 2}
-# df['label'] = df['label'].map(label_mapping)
+    # Create a DataFrame from the data
+    data = [line.strip().split('@') for line in lines if "@" in line]
+    df = pd.DataFrame(data, columns=['sentence', 'label'])
+    
+    # Create and fit the tokenizer
+    tokenizer = Tokenizer(num_words=max_words, oov_token="<OOV>")
+    tokenizer.fit_on_texts(df['sentence'])
+    
+    # Save the tokenizer for future use
+    with open(TOKENIZER_PATH, 'wb') as handle:
+        pickle.dump(tokenizer, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    print("Tokenizer fitted and saved to", TOKENIZER_PATH)
 
-# -----------------------------------------------------------------------------
-# Step 2. Set up the Tokenizer
-# -----------------------------------------------------------------------------
-# The model expects an input vector length matching max_words.
-# Here, we set max_words to 5543, which should match your training configuration.
-max_words = 5543
-tokenizer = Tokenizer(num_words=max_words, oov_token="<OOV>")
-tokenizer.fit_on_texts(df['sentence'])
+# -------------------------------
+# Step 2. Load the Pre-Trained Model
+# -------------------------------
+if os.path.exists(MODEL_PATH):
+    model = load_model(MODEL_PATH)
+    print("Model loaded from", MODEL_PATH)
+else:
+    raise FileNotFoundError(f"Model file not found at {MODEL_PATH}.")
 
-# -----------------------------------------------------------------------------
-# Step 3. Load the Pre-Trained Model
-# -----------------------------------------------------------------------------
-model = load_model('final_model.h5')
-
-# The following warnings are common:
-#   - "Compiled the loaded model, but the compiled metrics have yet to be built..."
-#   - "Error in loading the saved optimizer state..."
-#
-# These warnings do not affect inference.
-
-# -----------------------------------------------------------------------------
-# Step 4. Define Class Mapping and Prediction Function
-# -----------------------------------------------------------------------------
-# Ensure this mapping matches the order of outputs your model produces.
+# -------------------------------
+# Step 3. Define Class Mapping and Prediction Function
+# -------------------------------
+# Ensure that the mapping order matches your training output order.
 # For example, if the model outputs probabilities for [Negative, Neutral, Positive]:
 class_mapping = {
     0: 'Negative',
@@ -52,27 +66,26 @@ class_mapping = {
 
 def predict_sentiment(text):
     """
-    Converts the input text into a vector using texts_to_matrix,
-    runs the model to predict sentiment, prints the raw prediction probabilities
-    for debugging, and returns the sentiment label.
+    Converts the input text into a vector using the tokenizer,
+    obtains prediction probabilities from the model, prints them for debugging,
+    and returns the sentiment label.
     """
     # Convert the input text to a fixed-length vector representation.
-    # The 'mode' should match what was used during training (e.g., 'binary', 'tfidf', etc.)
-    vector = tokenizer.texts_to_matrix([text], mode='binary')
+    vector = tokenizer.texts_to_matrix([text], mode=vectorization_mode)
     
     # Get prediction probabilities from the model.
     predictions = model.predict(vector)
     print("Prediction probabilities (debug):", predictions)
     
-    # Get the index with the highest predicted probability.
+    # Determine the class with the highest probability.
     predicted_class = np.argmax(predictions, axis=1)[0]
     predicted_sentiment = class_mapping.get(predicted_class, "Unknown")
     
     return predicted_sentiment
 
-# -----------------------------------------------------------------------------
-# Step 5. Main Program: Get User Input and Print the Result
-# -----------------------------------------------------------------------------
+# -------------------------------
+# Step 4. Main Program: Get User Input and Print the Result
+# -------------------------------
 if __name__ == "__main__":
     user_text = input("Enter a sentence to analyze sentiment: ")
     sentiment_result = predict_sentiment(user_text)
