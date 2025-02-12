@@ -2,7 +2,7 @@ import pandas as pd
 import tensorflow as tf
 import numpy as np
 from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.models import load_model
+from keras.models import load_model
 
 # Load dataset
 with open('Sentences_75Agree_sample.txt', 'r', encoding='latin1') as file:
