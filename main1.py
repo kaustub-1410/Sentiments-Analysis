@@ -3,8 +3,8 @@ import pickle
 import pandas as pd
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.models import load_model
+from keras.preprocessing.text import Tokenizer
+from keras.models import load_model
 
 # -------------------------------
 # Configuration and File Paths
